@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keep Link Metadata Extractor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-soft: #1f2630;
+      --text: #e6edf3;
+      --muted: #9ca8b7;
+      --accent: #3b82f6;
+      --danger: #f87171;
+      --border: #30363d;
+      --youtube: #ef4444;
+      --tiktok: #a855f7;
+      --instagram: #ec4899;
+      --x: #6b7280;
+      --other: #64748b;
+      --ok: #34d399;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 10% -10%, #1f2937 0%, transparent 35%),
+        radial-gradient(circle at 90% 0%, #111827 0%, transparent 30%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Space Grotesk", system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 18px 40px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.7rem;
+      letter-spacing: 0.01em;
+    }
+
+    .sub {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0)), var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      color: #cdd7e1;
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--panel-soft);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+      transition: border-color 120ms ease;
+      resize: vertical;
+      min-height: 220px;
+      line-height: 1.4;
+    }
+
+    textarea:focus { border-color: var(--accent); }
+
+    #keepInput.dragover {
+      border-color: var(--ok);
+      box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.2);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 80ms ease, opacity 120ms ease;
+    }
+
+    button:active { transform: translateY(1px); }
+    button:disabled { cursor: not-allowed; opacity: 0.65; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-secondary { background: #263041; color: #d7deea; border-color: #334155; }
+    .btn-danger { background: #3a1f26; color: #fecdd3; border-color: #5b2632; }
+
+    .progress {
+      margin-top: 10px;
+      min-height: 1.2em;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #0f141b;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #222b36;
+      vertical-align: top;
+      font-size: 0.9rem;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #121922;
+      color: #d0d9e6;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      z-index: 1;
+    }
+
+    tr.error-row { background: rgba(248, 113, 113, 0.12); }
+
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: white;
+      letter-spacing: 0.02em;
+      text-transform: capitalize;
+    }
+
+    .b-youtube { background: var(--youtube); }
+    .b-tiktok { background: var(--tiktok); }
+    .b-instagram { background: var(--instagram); }
+    .b-x { background: var(--x); }
+    .b-other { background: var(--other); }
+
+    .link-cell a { color: #93c5fd; text-decoration: none; }
+    .link-cell a:hover { text-decoration: underline; }
+
+    .truncate {
+      max-width: 260px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: inline-block;
+      vertical-align: bottom;
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Keep Link Metadata Extractor</h1>
+    <p class="sub">Paste raw Google Keep export text. Notes are split by empty lines, first line is title, remaining content is parsed into links and note text.</p>
+
+    <section class="panel">
+      <div class="field">
+        <label for="keepInput">Keep Export Text</label>
+        <textarea id="keepInput" placeholder="Note title line 1\ncontent + links\n\nAnother note title\nmore content + links"></textarea>
+      </div>
+
+      <div class="actions">
+        <button id="fetchBtn" class="btn-primary">Fetch Metadata</button>
+        <button id="downloadBtn" class="btn-secondary" disabled>Download CSV</button>
+        <button id="clearBtn" class="btn-danger">Clear all</button>
+      </div>
+
+      <div id="progress" class="progress"></div>
+      <div class="empty">Tip: Drag & drop a .txt Keep export onto the textarea.</div>
+    </section>
+
+    <section class="panel">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Link</th>
+              <th>Title</th>
+              <th>Description</th>
+              <th>Note Title</th>
+              <th>Note Text</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const keepInput = document.getElementById("keepInput");
+    const fetchBtn = document.getElementById("fetchBtn");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const progressEl = document.getElementById("progress");
+    const resultsBody = document.getElementById("resultsBody");
+
+    let rows = [];
+    let isFetching = false;
+    const URL_REGEX = /https?:\/\/[^\s<>"')\]]+/gi;
+
+    function detectPlatform(urlString) {
+      try {
+        const u = new URL(urlString);
+        const host = u.hostname.toLowerCase();
+        if (host.includes("youtube.com") || host.includes("youtu.be")) return "YouTube";
+        if (host.includes("tiktok.com")) return "TikTok";
+        if (host.includes("instagram.com")) return "Instagram";
+        if (host === "x.com" || host.endsWith(".x.com") || host.includes("twitter.com")) return "X";
+        return "Other";
+      } catch {
+        return "Other";
+      }
+    }
+
+    function badgeClass(platform) {
+      switch (platform) {
+        case "YouTube": return "b-youtube";
+        case "TikTok": return "b-tiktok";
+        case "Instagram": return "b-instagram";
+        case "X": return "b-x";
+        default: return "b-other";
+      }
+    }
+
+    function setProgress(text) {
+      progressEl.textContent = text;
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function renderRow(row) {
+      const tr = document.createElement("tr");
+      if (row.error) tr.classList.add("error-row");
+
+      const safeUrl = escapeHtml(row.link);
+      const displayLink = row.link.length > 60 ? row.link.slice(0, 57) + "..." : row.link;
+
+      tr.innerHTML = `
+        <td><span class="badge ${badgeClass(row.platform)}">${escapeHtml(row.platform)}</span></td>
+        <td class="link-cell"><a href="${safeUrl}" target="_blank" rel="noopener noreferrer"><span class="truncate">${escapeHtml(displayLink)}</span></a></td>
+        <td>${escapeHtml(row.title)}</td>
+        <td>${escapeHtml(row.description)}</td>
+        <td>${escapeHtml(row.note_title)}</td>
+        <td>${escapeHtml(row.note_text)}</td>
+      `;
+      resultsBody.appendChild(tr);
+    }
+
+    function clearTable() {
+      resultsBody.innerHTML = "";
+      rows = [];
+      downloadBtn.disabled = true;
+    }
+
+    function parseKeepExport(rawText) {
+      const notes = [];
+      const blocks = rawText
+        .replace(/\r\n/g, "\n")
+        .split(/\n\s*\n+/)
+        .map(b => b.trim())
+        .filter(Boolean);
+
+      for (const block of blocks) {
+        const lines = block.split("\n");
+        const title = (lines.shift() || "").trim() || "Untitled";
+        const content = lines.join("\n");
+
+        const links = [];
+        let match;
+        while ((match = URL_REGEX.exec(content)) !== null) {
+          links.push(match[0]);
+        }
+        URL_REGEX.lastIndex = 0;
+
+        const noteText = content
+          .split("\n")
+          .map(line => line.replace(URL_REGEX, " ").replace(/\s+/g, " ").trim())
+          .filter(Boolean)
+          .join("\n");
+        URL_REGEX.lastIndex = 0;
+
+        notes.push({ title, noteText, links });
+      }
+      return notes;
+    }
+
+    async function fetchYouTube(url) {
+      const endpoint = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+      const res = await fetch(endpoint);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return {
+        title: data.title || "Untitled",
+        description: data.author_name || "No author provided"
+      };
+    }
+
+    async function fetchTikTok(url) {
+      const endpoint = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`;
+      const res = await fetch(endpoint);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      return {
+        title: data.title || "Untitled",
+        description: data.author_name || "No author provided"
+      };
+    }
+
+    async function fetchMetadataForUrl(url) {
+      const platform = detectPlatform(url);
+      if (platform === "Instagram") {
+        return { platform, title: "Instagram restricts metadata access", description: "Instagram restricts metadata access", error: false };
+      }
+      if (platform === "X") {
+        return { platform, title: "X/Twitter restricts metadata access", description: "X/Twitter restricts metadata access", error: false };
+      }
+      if (platform === "Other") {
+        return { platform, title: "Could not detect platform", description: "Could not detect platform", error: false };
+      }
+
+      try {
+        if (platform === "YouTube") {
+          const data = await fetchYouTube(url);
+          return { platform, title: data.title, description: data.description, error: false };
+        }
+        if (platform === "TikTok") {
+          const data = await fetchTikTok(url);
+          return { platform, title: data.title, description: data.description, error: false };
+        }
+        return { platform, title: "Could not detect platform", description: "Could not detect platform", error: false };
+      } catch (err) {
+        return {
+          platform,
+          title: "Failed to fetch metadata",
+          description: err && err.message ? `Fetch error: ${err.message}` : "Fetch error",
+          error: true
+        };
+      }
+    }
+
+    function csvEscape(value) {
+      const s = String(value ?? "");
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+
+    function makeCsvContent(dataRows) {
+      const header = ["platform", "link", "title", "description", "note_title", "note_text"];
+      const lines = [header.join(",")];
+      for (const r of dataRows) {
+        lines.push([
+          csvEscape(r.platform),
+          csvEscape(r.link),
+          csvEscape(r.title),
+          csvEscape(r.description),
+          csvEscape(r.note_title),
+          csvEscape(r.note_text)
+        ].join(","));
+      }
+      return "\uFEFF" + lines.join("\r\n");
+    }
+
+    function todayFilename() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `links_${yyyy}-${mm}-${dd}.csv`;
+    }
+
+    async function runFetch() {
+      if (isFetching) return;
+
+      const notes = parseKeepExport(keepInput.value);
+      const jobs = [];
+
+      for (const note of notes) {
+        for (const link of note.links) {
+          jobs.push({
+            link,
+            note_title: note.title,
+            note_text: note.noteText
+          });
+        }
+      }
+
+      if (jobs.length === 0) {
+        alert("No links found. Check that your Keep export text includes valid URLs.");
+        return;
+      }
+
+      isFetching = true;
+      fetchBtn.disabled = true;
+      downloadBtn.disabled = true;
+      clearTable();
+
+      const total = jobs.length;
+
+      for (let i = 0; i < total; i += 1) {
+        setProgress(`${i + 1} / ${total} fetched`);
+        const job = jobs[i];
+        const meta = await fetchMetadataForUrl(job.link);
+
+        const row = {
+          platform: meta.platform,
+          link: job.link,
+          title: meta.title,
+          description: meta.description,
+          note_title: job.note_title,
+          note_text: job.note_text,
+          error: meta.error
+        };
+
+        rows.push(row);
+        renderRow(row);
+      }
+
+      setProgress(`Done. ${rows.length} / ${rows.length} fetched`);
+      downloadBtn.disabled = rows.length === 0;
+      fetchBtn.disabled = false;
+      isFetching = false;
+    }
+
+    function runDownload() {
+      if (!rows.length) return;
+      const csv = makeCsvContent(rows);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = todayFilename();
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function runClear() {
+      if (isFetching) return;
+      keepInput.value = "";
+      clearTable();
+      setProgress("");
+    }
+
+    function isTxtFile(file) {
+      return file && (/\.txt$/i.test(file.name) || file.type === "text/plain");
+    }
+
+    async function readTextFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsText(file, "utf-8");
+      });
+    }
+
+    keepInput.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      keepInput.classList.add("dragover");
+    });
+
+    keepInput.addEventListener("dragleave", () => {
+      keepInput.classList.remove("dragover");
+    });
+
+    keepInput.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      keepInput.classList.remove("dragover");
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file) return;
+
+      if (!isTxtFile(file)) {
+        alert("Please drop a .txt file.");
+        return;
+      }
+
+      try {
+        keepInput.value = await readTextFile(file);
+      } catch {
+        alert("Could not read the dropped file.");
+      }
+    });
+
+    fetchBtn.addEventListener("click", runFetch);
+    downloadBtn.addEventListener("click", runDownload);
+    clearBtn.addEventListener("click", runClear);
+  </script>
+</body>
+</html>
