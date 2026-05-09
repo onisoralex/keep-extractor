@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keep Link Extractor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --accent: #6c8ef7;
+    --accent-hover: #8aa5ff;
+    --danger: #ef4444;
+    --warn-bg: rgba(234,179,8,0.08);
+    --warn-border: rgba(234,179,8,0.25);
+    --warn-text: #fde68a;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  header { margin-bottom: 2rem; }
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  header p { color: var(--muted); margin-top: 0.25rem; font-size: 0.875rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: monospace;
+    font-size: 0.8125rem;
+    padding: 0.75rem;
+    transition: border-color 0.15s;
+    width: 100%;
+    resize: vertical;
+    min-height: 220px;
+    line-height: 1.55;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(108,142,247,0.05);
+  }
+  .drop-hint {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.375rem;
+  }
+
+  /* Parse preview */
+  .parse-preview {
+    display: none;
+    margin-top: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .parse-summary {
+    background: var(--surface2);
+    padding: 0.6rem 0.875rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .parse-summary strong { color: var(--text); }
+  .parse-note-list {
+    padding: 0.5rem 0;
+  }
+  .parse-note-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.3rem 0.875rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+  .parse-note-item:last-child { border-bottom: none; }
+  .parse-note-title { color: var(--text); font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .parse-note-count { color: var(--muted); white-space: nowrap; font-size: 0.75rem; }
+
+  .warn-box {
+    display: none;
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    border-radius: 8px;
+    padding: 0.6rem 0.875rem;
+    font-size: 0.8rem;
+    color: var(--warn-text);
+    margin-top: 0.75rem;
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 0.5rem 1.25rem;
+    transition: background 0.15s, opacity 0.15s;
+  }
+
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-success {
+    background: #166534;
+    color: #bbf7d0;
+    border: 1px solid #15803d;
+  }
+  .btn-success:hover { background: #15803d; }
+
+  .progress-bar-wrap {
+    flex: 1;
+    min-width: 150px;
+    background: var(--surface2);
+    border-radius: 999px;
+    height: 6px;
+    overflow: hidden;
+    display: none;
+  }
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+  .progress-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    white-space: nowrap;
+    display: none;
+  }
+
+  /* Results */
+  .results-card { display: none; }
+
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+
+  thead th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.625rem 0.875rem;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.025); }
+  tbody tr.error-row { background: rgba(239,68,68,0.07); }
+
+  tbody td {
+    padding: 0.625rem 0.875rem;
+    vertical-align: top;
+    max-width: 220px;
+  }
+
+  .cell-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-family: monospace;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 200px;
+  }
+  .cell-link:hover { color: var(--accent-hover); text-decoration: underline; }
+
+  .cell-text { color: var(--text); word-break: break-word; }
+  .cell-muted { color: var(--muted); font-style: italic; word-break: break-word; }
+
+  .badge {
+    display: inline-block;
+    padding: 0.2em 0.55em;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .badge-youtube   { background: rgba(239,68,68,0.15);  color: #fca5a5; }
+  .badge-tiktok    { background: rgba(168,85,247,0.15); color: #d8b4fe; }
+  .badge-instagram { background: rgba(236,72,153,0.15); color: #f9a8d4; }
+  .badge-x         { background: rgba(100,116,139,0.15);color: #94a3b8; }
+  .badge-other     { background: rgba(148,163,184,0.1); color: #cbd5e1; }
+
+  .error-icon { color: var(--danger); font-size: 0.7rem; display: block; }
+
+  .row-enter { animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(3px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Keep Link Extractor</h1>
+    <p>Paste your Google Keep export. Notes are separated by blank lines; the first line of each note becomes its title.</p>
+  </header>
+
+  <div class="card">
+    <div class="card-title">Google Keep Export</div>
+    <div class="form-group">
+      <label for="export-input">Paste export text or drag & drop a .txt file</label>
+      <div class="drop-zone" id="drop-zone">
+        <textarea id="export-input" placeholder="My first note title
+Some context about this note
+https://www.youtube.com/watch?v=example1
+https://www.tiktok.com/@user/video/example2
+
+My second note title
+https://www.instagram.com/reel/example3
+A note about this one"></textarea>
+      </div>
+      <span class="drop-hint">Drag a .txt file here to load its contents</span>
+    </div>
+
+    <div class="parse-preview" id="parse-preview">
+      <div class="parse-summary" id="parse-summary"></div>
+      <div class="parse-note-list" id="parse-note-list"></div>
+    </div>
+
+    <div class="warn-box" id="warn-box"></div>
+
+    <div class="actions">
+      <button class="btn-primary" id="fetch-btn" disabled>Fetch Metadata</button>
+      <button class="btn-secondary" id="clear-btn">Clear All</button>
+      <div class="progress-bar-wrap" id="progress-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <span class="progress-label" id="progress-label"></span>
+    </div>
+  </div>
+
+  <div class="card results-card" id="results-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+      <div class="card-title" style="margin-bottom:0;">Results</div>
+      <button class="btn-success" id="download-btn">Download CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Link</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Note Title</th>
+            <th>Note Text</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const exportInput  = document.getElementById('export-input');
+  const fetchBtn     = document.getElementById('fetch-btn');
+  const clearBtn     = document.getElementById('clear-btn');
+  const downloadBtn  = document.getElementById('download-btn');
+  const progressWrap = document.getElementById('progress-wrap');
+  const progressBar  = document.getElementById('progress-bar');
+  const progressLabel= document.getElementById('progress-label');
+  const resultsCard  = document.getElementById('results-card');
+  const resultsBody  = document.getElementById('results-body');
+  const dropZone     = document.getElementById('drop-zone');
+  const parsePreview = document.getElementById('parse-preview');
+  const parseSummary = document.getElementById('parse-summary');
+  const parseNoteList= document.getElementById('parse-note-list');
+  const warnBox      = document.getElementById('warn-box');
+
+  const URL_RE = /https?:\/\/[^\s"'<>()[\]{}\\,;]+/gi;
+
+  let rows = [];
+  let parsedNotes = []; // [{ title, noteText, urls[] }]
+
+  // ── Drag & drop ───────────────────────────────────────────────────────────
+  ['dragenter','dragover'].forEach(evt =>
+    dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('drag-over'); })
+  );
+  ['dragleave','drop'].forEach(evt =>
+    dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('drag-over'); })
+  );
+  dropZone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { exportInput.value = ev.target.result; parseExport(); };
+    reader.readAsText(file);
+  });
+
+  // ── Parse on input ────────────────────────────────────────────────────────
+  exportInput.addEventListener('input', parseExport);
+
+  function parseExport() {
+    const raw = exportInput.value;
+    parsedNotes = [];
+    parsePreview.style.display = 'none';
+    warnBox.style.display = 'none';
+    fetchBtn.disabled = true;
+
+    if (!raw.trim()) return;
+
+    // Split into blocks on one or more blank lines
+    const blocks = raw.split(/\n[ \t]*\n+/).map(b => b.trim()).filter(b => b.length > 0);
+
+    for (const block of blocks) {
+      const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length === 0) continue;
+
+      const title = lines[0];
+
+      // Extract all URLs from every line of the block
+      const urls = [];
+      const seenUrls = new Set();
+      for (const line of lines) {
+        const found = line.match(URL_RE) || [];
+        for (const u of found) {
+          const clean = u.replace(/[.,;:!?)]+$/, ''); // strip trailing punctuation
+          if (!seenUrls.has(clean)) { seenUrls.add(clean); urls.push(clean); }
+        }
+      }
+
+      // Note text = non-first lines that are NOT purely a URL (may contain mixed content)
+      const textLines = lines.slice(1).filter(l => {
+        // Keep lines that have some non-URL content
+        const stripped = l.replace(URL_RE, '').trim();
+        return stripped.length > 0;
+      });
+      const noteText = textLines.join(' ').trim();
+
+      if (urls.length > 0) {
+        parsedNotes.push({ title, noteText, urls });
+      }
+    }
+
+    renderPreview();
+  }
+
+  function renderPreview() {
+    const totalLinks = parsedNotes.reduce((s, n) => s + n.urls.length, 0);
+
+    if (parsedNotes.length === 0) {
+      warnBox.style.display = 'block';
+      warnBox.textContent = 'No links found in the pasted text. Make sure URLs start with http:// or https://.';
+      return;
+    }
+
+    parsePreview.style.display = 'block';
+    parseSummary.innerHTML = `Detected <strong>${parsedNotes.length}</strong> note${parsedNotes.length !== 1 ? 's' : ''} with <strong>${totalLinks}</strong> link${totalLinks !== 1 ? 's' : ''} total`;
+
+    parseNoteList.innerHTML = '';
+    for (const note of parsedNotes) {
+      const div = document.createElement('div');
+      div.className = 'parse-note-item';
+      div.innerHTML = `<span class="parse-note-title">${esc(note.title)}</span><span class="parse-note-count">${note.urls.length} link${note.urls.length !== 1 ? 's' : ''}</span>`;
+      parseNoteList.appendChild(div);
+    }
+
+    fetchBtn.disabled = false;
+  }
+
+  // ── Platform detection ────────────────────────────────────────────────────
+  function detectPlatform(url) {
+    try {
+      const host = new URL(url).hostname.replace('www.', '');
+      if (host.includes('youtube.com') || host.includes('youtu.be')) return 'YouTube';
+      if (host.includes('tiktok.com'))   return 'TikTok';
+      if (host.includes('instagram.com'))return 'Instagram';
+      if (host.includes('twitter.com') || host.includes('x.com')) return 'X';
+      return 'Other';
+    } catch { return 'Other'; }
+  }
+
+  // ── oEmbed fetching ───────────────────────────────────────────────────────
+  async function fetchMeta(url) {
+    const platform = detectPlatform(url);
+    const enc = encodeURIComponent(url);
+
+    if (platform === 'YouTube') {
+      const res = await fetch(`https://www.youtube.com/oembed?url=${enc}&format=json`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d = await res.json();
+      return { platform, title: d.title || '', description: d.author_name || '' };
+    }
+
+    if (platform === 'TikTok') {
+      const res = await fetch(`https://www.tiktok.com/oembed?url=${enc}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d = await res.json();
+      return { platform, title: d.title || '', description: d.author_name || '' };
+    }
+
+    if (platform === 'Instagram') {
+      return { platform, title: 'Instagram restricts metadata access', description: 'Instagram restricts metadata access' };
+    }
+
+    if (platform === 'X') {
+      return { platform, title: 'X/Twitter restricts metadata access', description: 'X/Twitter restricts metadata access' };
+    }
+
+    return { platform: 'Other', title: 'Could not detect platform', description: 'Could not detect platform' };
+  }
+
+  // ── Badge ─────────────────────────────────────────────────────────────────
+  function badgeClass(p) {
+    return 'badge badge-' + ({ YouTube:'youtube', TikTok:'tiktok', Instagram:'instagram', X:'x' }[p] || 'other');
+  }
+
+  // ── Render a row ──────────────────────────────────────────────────────────
+  function appendRow(data) {
+    const tr = document.createElement('tr');
+    tr.classList.add('row-enter');
+    if (data.error) tr.classList.add('error-row');
+
+    const truncLink = data.url.length > 50 ? data.url.slice(0, 47) + '…' : data.url;
+    tr.innerHTML = `
+      <td><span class="${badgeClass(data.platform)}">${esc(data.platform)}</span></td>
+      <td><a class="cell-link" href="${esc(data.url)}" target="_blank" rel="noopener" title="${esc(data.url)}">${esc(truncLink)}</a></td>
+      <td class="${data.error ? 'cell-muted' : 'cell-text'}">${esc(data.title)}${data.error ? `<span class="error-icon">⚠ ${esc(data.error)}</span>` : ''}</td>
+      <td class="cell-text">${esc(data.description)}</td>
+      <td class="cell-muted">${esc(data.noteTitle)}</td>
+      <td class="cell-muted">${esc(data.noteText)}</td>
+    `;
+    resultsBody.appendChild(tr);
+  }
+
+  function esc(str) {
+    return String(str ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Main fetch loop ───────────────────────────────────────────────────────
+  fetchBtn.addEventListener('click', async () => {
+    if (!parsedNotes.length) return;
+
+    // Flatten into a job list: [{url, noteTitle, noteText}]
+    const jobs = [];
+    for (const note of parsedNotes) {
+      for (const url of note.urls) {
+        jobs.push({ url, noteTitle: note.title, noteText: note.noteText });
+      }
+    }
+
+    rows = [];
+    resultsBody.innerHTML = '';
+    resultsCard.style.display = 'block';
+    progressWrap.style.display = 'block';
+    progressLabel.style.display = 'inline';
+    fetchBtn.disabled = true;
+
+    for (let i = 0; i < jobs.length; i++) {
+      const { url, noteTitle, noteText } = jobs[i];
+      progressLabel.textContent = `${i + 1} / ${jobs.length} fetched`;
+      progressBar.style.width = `${((i + 1) / jobs.length) * 100}%`;
+
+      let rowData;
+      try {
+        const meta = await fetchMeta(url);
+        rowData = { ...meta, url, noteTitle, noteText, error: null };
+      } catch (err) {
+        rowData = {
+          platform: detectPlatform(url),
+          url, noteTitle, noteText,
+          title: 'Fetch failed',
+          description: '',
+          error: err.message || 'Unknown error',
+        };
+      }
+
+      rows.push(rowData);
+      appendRow(rowData);
+    }
+
+    progressLabel.textContent = `Done — ${jobs.length} link${jobs.length !== 1 ? 's' : ''} across ${parsedNotes.length} note${parsedNotes.length !== 1 ? 's' : ''}`;
+    fetchBtn.disabled = false;
+  });
+
+  // ── Clear ─────────────────────────────────────────────────────────────────
+  clearBtn.addEventListener('click', () => {
+    exportInput.value = '';
+    parsedNotes = [];
+    rows = [];
+    resultsBody.innerHTML = '';
+    resultsCard.style.display = 'none';
+    parsePreview.style.display = 'none';
+    warnBox.style.display = 'none';
+    progressWrap.style.display = 'none';
+    progressLabel.style.display = 'none';
+    progressBar.style.width = '0%';
+    fetchBtn.disabled = true;
+  });
+
+  // ── CSV Download ──────────────────────────────────────────────────────────
+  downloadBtn.addEventListener('click', () => {
+    if (!rows.length) return;
+
+    const header = ['platform','link','title','description','note_title','note_text'];
+    const csvRows = [header, ...rows.map(r => [
+      r.platform, r.url, r.title, r.description, r.noteTitle, r.noteText,
+    ])];
+
+    const csv = csvRows.map(row =>
+      row.map(cell => '"' + String(cell ?? '').replace(/"/g,'""') + '"').join(',')
+    ).join('\r\n');
+
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const today = new Date().toISOString().slice(0, 10);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `links_${today}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+})();
+</script>
+</body>
+</html>
