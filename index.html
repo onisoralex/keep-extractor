@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keep Link Extractor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Keep Link Extractor</h1>
+    <p>Paste your Google Keep export. Notes are separated by blank lines; the first line of each note becomes its title.</p>
+  </header>
+
+  <div class="card">
+    <div class="card-title">Google Keep Export</div>
+    <div class="form-group">
+      <label for="export-input">Paste export text or drag &amp; drop a .txt file</label>
+      <textarea id="export-input" placeholder="My first note title
+Some context about this note
+https://www.youtube.com/watch?v=example1
+https://www.tiktok.com/@user/video/example2
+
+My second note title
+https://www.instagram.com/reel/example3
+A note about this one"></textarea>
+      <span class="drop-hint">Drag a .txt file here to load its contents</span>
+    </div>
+
+    <div class="parse-preview" id="parse-preview">
+      <div class="parse-summary" id="parse-summary"></div>
+      <div class="parse-note-list" id="parse-note-list"></div>
+    </div>
+
+    <div class="warn-box" id="warn-box"></div>
+
+    <div class="actions">
+      <button class="btn-primary" id="fetch-btn" disabled>Fetch Metadata</button>
+      <button class="btn-secondary" id="clear-btn">Clear All</button>
+      <div class="progress-bar-wrap" id="progress-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <span class="progress-label" id="progress-label"></span>
+    </div>
+  </div>
+
+  <div class="card results-card" id="results-card">
+    <div class="results-header">
+      <div class="card-title">Results</div>
+      <button class="btn-success" id="download-btn">Download CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Link</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Note Title</th>
+            <th>Note Text</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
